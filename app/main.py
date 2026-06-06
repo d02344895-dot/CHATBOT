@@ -16,8 +16,11 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Otterly Spotless Chatbot")
 
-# Fallback client using env var — used by /webhook (ManyChat)
-default_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+def get_default_client() -> AsyncOpenAI:
+    key = os.getenv("OPENAI_API_KEY")
+    if not key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set on server")
+    return AsyncOpenAI(api_key=key)
 
 conversation_history: dict[str, list[dict]] = {}
 
@@ -90,7 +93,7 @@ async def chat(request: Request):
         raise HTTPException(status_code=400, detail="Missing message")
 
     # Use key from UI if provided, otherwise fall back to env var
-    client = AsyncOpenAI(api_key=api_key) if api_key else default_openai_client
+    client = AsyncOpenAI(api_key=api_key) if api_key else get_default_client()
     system_prompt = build_system_prompt(business_info)
 
     try:
@@ -124,7 +127,7 @@ async def webhook(request: Request):
 
     try:
         reply = await get_ai_reply(
-            subscriber_id, user_message, SYSTEM_PROMPT, default_openai_client
+            subscriber_id, user_message, SYSTEM_PROMPT, get_default_client()
         )
     except Exception as e:
         logger.error(f"Error: {e}")
