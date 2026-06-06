@@ -1,11 +1,15 @@
 import os
 import logging
+from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from openai import AsyncOpenAI
 from app.knowledge_base import SYSTEM_PROMPT
 from app.manychat import send_message
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "static"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,12 +21,12 @@ default_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 conversation_history: dict[str, list[dict]] = {}
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 @app.get("/")
 async def root():
-    return FileResponse("static/index.html")
+    return FileResponse(str(STATIC_DIR / "index.html"))
 
 
 def get_history(subscriber_id: str) -> list[dict]:
